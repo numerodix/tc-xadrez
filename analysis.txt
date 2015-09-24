@@ -1,0 +1,75 @@
+= Problem space
+
+On a board of dimensions N x M using a *single* piece A gives NxM possible boards
+(board configurations).
+
+Let's say N x M is 4x4 = 16.
+
+Adding a second piece B means that for each of the 16 possible positions of
+piece A there are 16 possible positions for piece B.
+
+Therefore the number of boards is 16^2.
+
+(This will include boards where both A and B occupy the same cell.)
+
+Adding more pieces P gives 16^P, or more generally (N * M) ^ P.
+
+Example: board is 7x7 with 7 pieces -> (7*7)^7 = 678,223.072,849 boards
+
+
+
+= Brute force approach
+
+First we generate every possible board.
+
+We then use a decision procedure to identify boards with a successful placement
+of pieces (ie. valid boards) such that no piece can reach any other piece:
+
+- For each piece on a board:
+    - If the cell that belongs to the piece has another occupant, the board is invalid.
+    - Generate a collection of cells reachable by the piece:
+        - If any of these cells have an occupant, the board is invalid (fail fast).
+
+Rationale for correctness:
+- Given that we generate every possible board,
+    - we know that all possible placements of pieces will be tried, 
+    - thus for a given board it's enough to ascertain that no piece can reach any other,
+    - and this can be checked individually per piece since reachability is a uni-direction property.
+
+Computational complexity:
+"Generating every possible board" is essentially a deeply nested loop, and
+since there is no dependency by one board on another there is no need to keep
+more than one instance of a board in memory at any time.
+
+For each board we instantiate a Board with Piece's that can compute their own
+reachability within the board. We iterate over the pieces to find other pieces
+reachable from them. We stop as soon as we've found a single match.
+
+The number of checks for occupancy will be:
+
+number of pieces on the board P
+times the number of cells reachable by each piece in P (which depends on the type of piece)
+
+K (King) = 8
+Q (Queen) = N + M + 2 * diag
+R (Rook) = N + M
+N (Knight) = 8
+B (Bishop) = 2 * diag
+
+diag is essentially sqrt( N^2 + M^2 ) if the board is square (N = M)
+in the more general case it's sqrt( min(N, M) ^ 2 )
+
+These numbers are upper bounds, because in practice many of the "reachable
+cells" will fall outside the board. Moreover, these numbers grow linearly in N
+and M and present a very small factor multiplied by the number of boards we
+need to examine.
+
+So overall complexity is:
+    (number of boards) * (number of pieces * number of occupancy checks per piece)
+    [ (N * M) ^ P    ] * [P                * N + M (approx)]
+
+for the example case 7x7 with 7 pieces the factor on the right is: 7 * 7+7
+so that adds about two levels of magnitude.
+
+In other words, it's not that checking a single board is costly, it's the
+number of boards to check.
