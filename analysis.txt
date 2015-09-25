@@ -57,10 +57,11 @@ N (Knight) = 8
 B (Bishop) = 2 * diag
 
 diag is essentially sqrt( N^2 + M^2 ) if the board is square (N = M)
-in the more general case it's sqrt( min(N, M) ^ 2 )
+in the more general case it's sqrt( 2 * min(N, M)^2 )
 
 These numbers are upper bounds, because in practice many of the "reachable
-cells" will fall outside the board. Moreover, these numbers grow linearly in N
+cells" will fall outside the board. And because the occupancy check terminates
+as soon as a single match is found. Moreover, these numbers grow linearly in N
 and M and present a very small factor multiplied by the number of boards we
 need to examine.
 
@@ -68,8 +69,15 @@ So overall complexity is:
     (number of boards) * (number of pieces * number of occupancy checks per piece)
     [ (N * M) ^ P    ] * [P                * N + M (approx)]
 
-for the example case 7x7 with 7 pieces the factor on the right is: 7 * 7+7
-so that adds about two levels of magnitude.
+for the example case 7x7 with 7 pieces the factor on the right is: 7 * 7+7 so
+that adds about two levels of magnitude. Again, this is a significant
+over-estimation of the upper bound.
 
 In other words, it's not that checking a single board is costly, it's the
 number of boards to check.
+
+Runtime estimate:
+Take a very rough estimate of 50ns per occupancy check in Python (mostly
+iteration and dict lookup). Assume ammortized board instantiation.
+
+That gives: ((7*7)^7) * (7 * 7+7) * 50ns = 38 days
