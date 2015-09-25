@@ -16,6 +16,8 @@ Adding more pieces P gives 16^P, or more generally (N * M) ^ P.
 
 Example: board is 7x7 with 7 pieces -> (7*7)^7 = 678,223.072,849 boards
 
+The pieces: 2 Kings, 2 Queens, 2 Bishops, 1 Knight
+
 
 
 = Brute force approach
@@ -30,7 +32,7 @@ of pieces (ie. valid boards) such that no piece can reach any other piece:
     - Generate a collection of cells reachable by the piece:
         - If any of these cells have an occupant, the board is invalid (fail fast).
 
-Rationale for correctness:
+Rationale for correctness and completeness:
 - Given that we generate every possible board,
     - we know that all possible placements of pieces will be tried, 
     - thus for a given board it's enough to ascertain that no piece can reach any other,
@@ -81,3 +83,115 @@ Take a very rough estimate of 50ns per occupancy check in Python (mostly
 iteration and dict lookup). Assume ammortized board instantiation.
 
 That gives: ((7*7)^7) * (7 * 7+7) * 50ns = 38 days
+
+
+
+= Restricted board approach
+
+Clearly the brute force method is made expensive by generating all boards and
+then eliminating most of them as invalid. If instead we could generate only
+valid boards to begin with it would be more efficient.
+
+The idea of the restricted board is one that enforces the unreachability
+invariant, so when attempting to place a piece on the board the board will not
+allow it should that placement cause any piece on the board to become
+reachable.
+
+The second thing we need is a strategy for filling up the board. For this we
+start in the top left corner and proceed left-to-right, top-to-bottom. As we
+place successive pieces we do so as tightly as possible while maintaining
+unreachability.
+
+Example (board is 3x3, we have to place 2 Kings, 1 Rook):
+
+-------
+| | | |
+-------
+| | | |
+-------
+| | | |
+-------
+
+We begin at cell 1,1. The king makes the surrounding cells reachable.
+
+-------
+|K|.| |
+-------
+|.|.| |
+-------
+| | | |
+-------
+
+We proceed to cell 2,1, which is reachable, so we continue to cell 3,1 and
+place a king there:
+
+-------
+|K|.|K|
+-------
+|.|.|.|
+-------
+| | | |
+-------
+
+We only have the rook left. Cells 1,2, 2,2, 3,2 are all reachable. The next
+available cell is 1,3. We can't place the rook there, since it would be able
+to reach the king. We proceed to 2,3 and place the rook there:
+
+-------
+|K|.|K|
+-------
+|.|.|.|
+-------
+|.|R|.|
+-------
+
+We've placed all the pieces successfully. The board is valid.
+
+Obviously, this is just one of many possible boards. To discover the others
+we will vary on two elements:
+- the order in which we place the pieces (in the example it was King, King, Rook)
+- the cell we start in (in the example it was 1,1 - next round would be 2,1)
+    - when we reach the end of the board during placement (lower right corner)
+    we wrap around to 1,1
+
+This amounts to the following:
+- We use a board that enforces unreachability,
+    - placing pieces on the board successively,
+    - enumerating over all the pieces.
+- Furthermore, we generate the board using
+    - every permutation of pieces, and
+    - starting from every cell on the board.
+
+Rationale for correctness and completeness:
+Given a restricted board we can assume every board we generate will be valid as
+long as we are able to place all the pieces.
+
+Completeness is a very different story. Since under this approach we will not
+generate every possible board (valid+invalid) there is no a priori reason to
+expect that we will discover every valid board.
+
+However, since we execute our placement procedure starting at every cell on the
+board, and trying every permutation of our pieces, it logically follows that
+this exhausts all possibilities of valid boards.
+
+That is, with one caveat. Since our placement procedure always places pieces as
+tightly as possible, we will never discover boards where there is more room on
+the board than is needed for the pieces.
+
+Counter-example (board is 4x4, we have 2 Kings to place):
+
+FOUND             NOT FOUND
+---------         ---------
+|K|.|K|.|         |K|.| | |
+---------         ---------
+|.|.|.|.|         |.|.|.|.|
+---------         ---------
+| | | | |         | | |.|K|
+---------         ---------
+| | | | |         | | |.|.|
+---------         ---------
+
+The fact that we place pieces left-to-right and top-to-bottom has no special
+significance, because all of the pieces in use (pawns are excluded) are
+orientation neutral, so going top-to-bottom is sufficient without also going
+bottom-to-top to discover additional boards.
