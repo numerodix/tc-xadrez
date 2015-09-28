@@ -168,10 +168,11 @@ class BoardTests(TestCase):
 
     def test_check_valid_adjacent(self):
         board = Board(
-            dimensions=(2, 1),
+            dimensions=(3, 1),
             placements={
-                (0, 0): Rook(),
-                (1, 0): King(),
+                (0, 0): King(),
+                (1, 0): None,
+                (2, 0): Rook(),
             },
         )
 
@@ -179,9 +180,12 @@ class BoardTests(TestCase):
             board.check_valid()
 
         exc = cm.exception
-        assert exc.message == 'Overlap detected at (1, 0): contains piece King and is reachable by Rook at (0, 0)'
+        assert exc.message == (
+            'Overlap detected at (0, 0): contains piece King '
+            'and is reachable by Rook at (2, 0)'
+        )
 
-    def test_check_valid_no_conflict(self):
+    def test_check_valid_no_conflict_kings(self):
         board = Board(
             dimensions=(3, 1),
             placements={

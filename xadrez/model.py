@@ -154,8 +154,6 @@ class Board(object):
         except TypeError:
             raise ValueError("Must pass dimensions as iterable of size two")
 
-        piece_index = {}
-
         # If we are passed a placements vector we trust the input we receive,
         # otherwise we generate an empty one
         if placements is None:
@@ -167,10 +165,10 @@ class Board(object):
 
         # Build an index on pieces because it's useful to have easy access to
         # them
-        else:
-            for coord, piece in placements.items():
-                if piece is not None:
-                    piece_index[piece] = coord
+        piece_index = {}
+        for coord, piece in placements.items():
+            if piece is not None:
+                piece_index[piece] = coord
 
         self.dimensions = (x, y)
         self.placements = placements
@@ -185,13 +183,7 @@ class Board(object):
         )
 
     def check_valid(self):
-        # Build a reverse index on the piece coords so that I can easily test
-        # for membership against coords that contain pieces and find that piece
-        piece_coords_index = {}
-        for piece, coord in self.piece_index.items():
-            piece_coords_index[coord] = piece
-
-        # For each piecce get its coordinates
+        # For each piece get its coordinates
         for piece, coord in self.piece_index.items():
 
             # Compute the cells it reaches
@@ -205,8 +197,8 @@ class Board(object):
                 # Note that it's safe to include the current piece's
                 # coordinates, because those will always be excluded from its
                 # own reach.
-                if cell in piece_coords_index:
-                    reachable_piece = piece_coords_index[cell]
+                reachable_piece = self.placements.get(cell)
+                if reachable_piece is not None:
                     raise ConflictError(
                         (
                             "Overlap detected at %s: "
