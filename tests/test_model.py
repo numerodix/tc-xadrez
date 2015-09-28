@@ -1,8 +1,11 @@
 from unittest import TestCase
 
+from xadrez.model import Bishop
 from xadrez.model import Board
 from xadrez.model import Piece
 from xadrez.model import King
+from xadrez.model import Knight
+from xadrez.model import Queen
 from xadrez.model import Rook
 
 
@@ -18,9 +21,39 @@ class PieceTests(TestCase):
         # otherwise not
         assert king != rook
 
+    def test_filter_outside_board(self):
+        piece = Piece()
+        dimensions = (2, 3)
 
-class ModelTests(TestCase):
-    def test_board_invalid_dimensions(self):
+        assert piece.is_outside_board(dimensions, (-1, -1)) is True
+        assert piece.is_outside_board(dimensions, (0, -1)) is True
+        assert piece.is_outside_board(dimensions, (-1, 0)) is True
+
+        assert piece.is_outside_board(dimensions, (0, 0)) is False
+        assert piece.is_outside_board(dimensions, (1, 0)) is False
+        assert piece.is_outside_board(dimensions, (0, 1)) is False
+        assert piece.is_outside_board(dimensions, (1, 1)) is False
+        assert piece.is_outside_board(dimensions, (0, 2)) is False
+        assert piece.is_outside_board(dimensions, (1, 2)) is False
+
+        assert piece.is_outside_board(dimensions, (2, 0)) is True
+        assert piece.is_outside_board(dimensions, (2, 1)) is True
+        assert piece.is_outside_board(dimensions, (2, 2)) is True
+        assert piece.is_outside_board(dimensions, (2, 3)) is True
+        assert piece.is_outside_board(dimensions, (3, 3)) is True
+
+
+__TEMPLATE = '''
+(0, 0), (1, 0), (2, 0), (3, 0), (4, 0),
+(0, 1), (1, 1), (2, 1), (3, 1), (4, 1),
+(0, 2), (1, 2), (2, 2), (3, 2), (4, 2),
+(0, 3), (1, 3), (2, 3), (3, 3), (4, 3),
+(0, 4), (1, 4), (2, 4), (3, 4), (4, 4),
+'''
+
+
+class BoardTests(TestCase):
+    def test_board_creation_invalid(self):
         with self.assertRaises(ValueError):
             Board(dimensions=tuple())
 
@@ -62,3 +95,66 @@ class ModelTests(TestCase):
             (1, 0): rook,
             (1, 1): None,
         }
+
+
+    def test_bishop_reach(self):
+        bishop = Bishop()
+        dimensions = (5, 5)
+
+        cells = bishop.reaches((2, 2), dimensions)
+        assert sorted(cells) == sorted([
+            (0, 0),                         (4, 0),
+                    (1, 1),         (3, 1),
+
+                    (1, 3),         (3, 3),
+            (0, 4),                         (4, 4),
+        ])
+
+    def test_king_reach(self):
+        king = King()
+        dimensions = (3, 3)
+
+        cells = king.reaches((1, 0), dimensions)
+        assert sorted(cells) == sorted([
+            (0, 0),         (2, 0),
+            (0, 1), (1, 1), (2, 1),
+        ])
+
+    def test_knight_reach(self):
+        knight = Knight()
+        dimensions = (5, 5)
+
+        cells = knight.reaches((2, 2), dimensions)
+        assert sorted(cells) == sorted([
+                    (1, 0),         (3, 0),
+            (0, 1),                         (4, 1),
+
+            (0, 3),                         (4, 3),
+                    (1, 4),         (3, 4),
+        ])
+
+    def test_queen_reach(self):
+        queen = Queen()
+        dimensions = (5, 5)
+
+        cells = queen.reaches((2, 2), dimensions)
+        assert sorted(cells) == sorted([
+            (0, 0),         (2, 0),         (4, 0),
+                    (1, 1), (2, 1), (3, 1),
+            (0, 2), (1, 2),         (3, 2), (4, 2),
+                    (1, 3), (2, 3), (3, 3),
+            (0, 4),         (2, 4),         (4, 4),
+        ])
+
+    def test_rook_reach(self):
+        rook = Rook()
+        dimensions = (5, 5)
+
+        cells = rook.reaches((2, 2), dimensions)
+        assert sorted(cells) == sorted([
+                            (2, 0),
+                            (2, 1),
+            (0, 2), (1, 2),         (3, 2), (4, 2),
+                            (2, 3),
+                            (2, 4),
+        ])
