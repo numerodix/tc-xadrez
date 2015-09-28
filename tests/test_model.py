@@ -8,6 +8,7 @@ from xadrez.model import Knight
 from xadrez.model import Piece
 from xadrez.model import Queen
 from xadrez.model import Rook
+from xadrez.visualize import BoardTextDisplay
 
 
 class PieceTests(TestCase):
@@ -54,6 +55,12 @@ __TEMPLATE = '''
 
 
 class BoardTests(TestCase):
+    def __init__(self, *args):
+        super(BoardTests, self).__init__(*args)
+
+        self.display = BoardTextDisplay()
+
+
     def test_board_creation_invalid(self):
         with self.assertRaises(ValueError):
             Board(dimensions=tuple())
@@ -84,9 +91,7 @@ class BoardTests(TestCase):
             dimensions=(2, 2),
             placements={
                 (0, 0): king,
-                (0, 1): None,
                 (1, 0): rook,
-                (1, 1): None,
             },
         )
 
@@ -166,12 +171,17 @@ class BoardTests(TestCase):
         ])
 
 
-    def test_check_valid_adjacent(self):
+    def test_check_valid_conflict(self):
+        '''
+            -------
+            |K| |R|
+            -------
+        '''
+
         board = Board(
             dimensions=(3, 1),
             placements={
                 (0, 0): King(),
-                (1, 0): None,
                 (2, 0): Rook(),
             },
         )
@@ -185,13 +195,160 @@ class BoardTests(TestCase):
             'and is reachable by Rook at (2, 0)'
         )
 
+    def test_check_valid_conflict_kings(self):
+        '''
+            -----
+            |K|K|
+            -----
+        '''
+
+        board = Board(
+            dimensions=(2, 1),
+            placements={
+                (0, 0): King(),
+                (1, 0): King(),
+            },
+        )
+
+        with self.assertRaises(ConflictError):
+            board.check_valid()
+
     def test_check_valid_no_conflict_kings(self):
+        '''
+            -------
+            |K| |K|
+            -------
+        '''
+
         board = Board(
             dimensions=(3, 1),
             placements={
                 (0, 0): King(),
-                (1, 0): None,
                 (2, 0): King(),
+            },
+        )
+
+        # does not raise
+        board.check_valid()
+
+    def test_check_valid_no_conflict_rooks(self):
+        '''
+            -----
+            |R| |
+            -----
+            | |R|
+            -----
+        '''
+
+        board = Board(
+            dimensions=(2, 2),
+            placements={
+                (0, 0): Rook(),
+                (1, 1): Rook(),
+            },
+        )
+
+        # does not raise
+        board.check_valid()
+
+    def test_check_valid_no_conflict_queens(self):
+        '''
+            -------
+            |Q| | |
+            -------
+            | | |Q|
+            -------
+        '''
+
+        board = Board(
+            dimensions=(3, 2),
+            placements={
+                (0, 0): Queen(),
+                (2, 1): Queen(),
+            },
+        )
+
+        # does not raise
+        board.check_valid()
+
+    def test_check_valid_conflict_knights(self):
+        '''
+            -------
+            |N| | |
+            -------
+            | | |N|
+            -------
+        '''
+
+        board = Board(
+            dimensions=(3, 2),
+            placements={
+                (0, 0): Knight(),
+                (2, 1): Knight(),
+            },
+        )
+
+        with self.assertRaises(ConflictError):
+            board.check_valid()
+
+    def test_check_valid_no_conflict_knights(self):
+        '''
+            ---------
+            |N| | | |
+            ---------
+            | | | |N|
+            ---------
+        '''
+
+        board = Board(
+            dimensions=(4, 2),
+            placements={
+                (0, 0): Knight(),
+                (3, 1): Knight(),
+            },
+        )
+
+        # does not raise
+        board.check_valid()
+
+    def test_check_valid_conflict_bishop(self):
+        '''
+            -------
+            |N| | |
+            -------
+            | | | |
+            -------
+            | | |B|
+            -------
+        '''
+
+        board = Board(
+            dimensions=(3, 3),
+            placements={
+                (0, 0): Knight(),
+                (2, 2): Bishop(),
+            },
+        )
+
+        with self.assertRaises(ConflictError):
+            board.check_valid()
+
+    def test_check_valid_no_conflict_bishop(self):
+        '''
+            -------
+            | |R| |
+            -------
+            | | | |
+            -------
+            | | |B|
+            -------
+        '''
+
+        board = Board(
+            dimensions=(3, 3),
+            placements={
+                (1, 0): Rook(),
+                (2, 2): Bishop(),
             },
         )
 

@@ -148,7 +148,7 @@ class Rook(Piece):
 
 
 class Board(object):
-    def __init__(self, dimensions, placements=None):
+    def __init__(self, dimensions, placements=None, backfill_placements=True):
         try:
             x, y = dimensions
         except TypeError:
@@ -156,12 +156,23 @@ class Board(object):
 
         # If we are passed a placements vector we trust the input we receive,
         # otherwise we generate an empty one
+        empty_placements = False
         if placements is None:
+            empty_placements = True
             placements = {}
             for i in range(x):
                 for j in range(y):
                     coord = (i, j)
                     placements[coord] = None
+
+        # If the collection of placements passed was incomplete let's back fill
+        # it (no need if we just generated them all in the previous step though)
+        if not empty_placements and backfill_placements:
+            for i in range(x):
+                for j in range(y):
+                    coord = (i, j)
+                    if coord not in placements:
+                        placements[coord] = None
 
         # Build an index on pieces because it's useful to have easy access to
         # them
