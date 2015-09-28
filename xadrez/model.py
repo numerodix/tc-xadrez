@@ -1,3 +1,7 @@
+class ConflictError(Exception):
+    pass
+
+
 class Piece(object):
     def __repr__(self):
         return '<%s symbol=%r>' % (
@@ -93,6 +97,7 @@ class Bishop(Piece):
     def reaches(self, coord, dimensions):
         return get_bishop_reach(coord, dimensions)
 
+
 class King(Piece):
     symbol = 'K'
 
@@ -106,6 +111,7 @@ class King(Piece):
 
         cells = self.filter_inside_board(dimensions, cells)
         return cells
+
 
 class Knight(Piece):
     symbol = 'N'
@@ -123,6 +129,7 @@ class Knight(Piece):
         cells = self.filter_inside_board(dimensions, cells)
         return cells
 
+
 class Queen(Piece):
     symbol = 'Q'
 
@@ -131,6 +138,7 @@ class Queen(Piece):
         rook_cells = get_rook_reach(coord, dimensions)
         cells = bishop_cells + rook_cells
         return cells
+
 
 class Rook(Piece):
     symbol = 'R'
@@ -146,6 +154,8 @@ class Board(object):
         except TypeError:
             raise ValueError("Must pass dimensions as iterable of size two")
 
+        piece_index = {}
+
         # If we are passed a placements vector we trust the input we receive,
         # otherwise we generate an empty one
         if placements is None:
@@ -155,8 +165,16 @@ class Board(object):
                     coord = (i, j)
                     placements[coord] = None
 
+        # Build an index on pieces because it's useful to have easy access to
+        # them
+        else:
+            for coord, piece in placements.items():
+                if piece is not None:
+                    piece_index[piece] = coord
+
         self.dimensions = (x, y)
         self.placements = placements
+        self.piece_index = piece_index
 
     def __repr__(self):
         placements = sorted(self.placements.items())
@@ -165,3 +183,39 @@ class Board(object):
             self.dimensions,
             placements,
         )
+
+    def check_valid(self):
+        # Build a reverse index on the piece coords so that I can easily test
+        # for membership against coords that contain pieces and find that piece
+        piece_coords_index = {}
+        for piece, coord in self.piece_index.items():
+            piece_coords_index[coord] = piece
+
+        # For each piecce get its coordinates
+        for piece, coord in self.piece_index.items():
+
+            # Compute the cells it reaches
+            cells = piece.reaches(coord, self.dimensions)
+
+            # Iterate over these cells
+            for cell in cells:
+
+                # If the cell (which this piece can reach) matches one of the
+                # coordinates of the pieces on the board we have a conflict.
+                # Note that it's safe to include the current piece's
+                # coordinates, because those will always be excluded from its
+                # own reach.
+                if cell in piece_coords_index:
+                    reachable_piece = piece_coords_index[cell]
+                    raise ConflictError(
+                        (
+                            "Overlap detected at %s: "
+                            "contains piece %s "
+                            "and is reachable by %s at %s"
+                        ) % (
+                            repr(cell),
+                            reachable_piece.__class__.__name__,
+                            piece.__class__.__name__,
+                            coord,
+                        )
+                    )

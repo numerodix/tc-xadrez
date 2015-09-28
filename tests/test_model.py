@@ -2,9 +2,10 @@ from unittest import TestCase
 
 from xadrez.model import Bishop
 from xadrez.model import Board
-from xadrez.model import Piece
+from xadrez.model import ConflictError
 from xadrez.model import King
 from xadrez.model import Knight
+from xadrez.model import Piece
 from xadrez.model import Queen
 from xadrez.model import Rook
 
@@ -73,6 +74,7 @@ class BoardTests(TestCase):
             (1, 0): None,
             (1, 1): None,
         }
+        assert board.piece_index == {}
 
     def test_board_creation_non_empty(self):
         king = King()
@@ -94,6 +96,10 @@ class BoardTests(TestCase):
             (0, 1): None,
             (1, 0): rook,
             (1, 1): None,
+        }
+        assert board.piece_index == {
+            king: (0, 0),
+            rook: (1, 0),
         }
 
 
@@ -158,3 +164,32 @@ class BoardTests(TestCase):
                             (2, 3),
                             (2, 4),
         ])
+
+
+    def test_check_valid_adjacent(self):
+        board = Board(
+            dimensions=(2, 1),
+            placements={
+                (0, 0): Rook(),
+                (1, 0): King(),
+            },
+        )
+
+        with self.assertRaises(ConflictError) as cm:
+            board.check_valid()
+
+        exc = cm.exception
+        assert exc.message == 'Overlap detected at (1, 0): contains piece King and is reachable by Rook at (0, 0)'
+
+    def test_check_valid_no_conflict(self):
+        board = Board(
+            dimensions=(3, 1),
+            placements={
+                (0, 0): King(),
+                (1, 0): None,
+                (2, 0): King(),
+            },
+        )
+
+        # does not raise
+        board.check_valid()
