@@ -1,141 +1,21 @@
-= Problem space
+= A solution in two parts
 
-On a board of dimensions N x M using a *single* piece A gives NxM possible boards
-(board configurations).
+Problem statement:
+We wish to generate all possible boards (board configurations) using a board of
+dimensions 7x7 and the pieces 2 Kings, 2 Queens, 2 Bishops, 1 Knight.
 
-Let's say N x M is 4x4 = 16.
+A board where no piece can reach any other piece is said to be valid. We wish
+to discover all valid boards only, not all boards in general.
 
-Adding a second piece B means that for each of the 16 possible positions of
-piece A there are 16 possible positions for piece B.
+The problem can be split into two steps:
 
-Therefore the number of boards is 16^2.
-
-(This will include boards where both A and B occupy the same cell.)
-
-Adding more pieces P gives 16^P, or more generally (N * M) ^ P.
-
-Example: board is 7x7 with 7 pieces -> (7*7)^7 = 678,223.072,849 boards
-
-The pieces: 2 Kings, 2 Queens, 2 Bishops, 1 Knight
+1) Generate all possible boards.
+2) Filter these against a validity test.
 
 
+== Generating all possible boards
 
-= Brute force approach
-
-First we generate every possible board.
-
-We then use a decision procedure to identify boards with a successful placement
-of pieces (ie. valid boards) such that no piece can reach any other piece:
-
-- For each piece on a board:
-    - If the cell that belongs to the piece has another occupant, the board is invalid.
-    - Generate a collection of cells reachable by the piece:
-        - If any of these cells have an occupant, the board is invalid (fail fast).
-
-Rationale for correctness and completeness:
-- Given that we generate every possible board,
-    - we know that all possible placements of pieces will be tried, 
-    - thus for a given board it's enough to ascertain that no piece can reach any other,
-    - and this can be checked individually per piece since reachability is a uni-direction property.
-
-Computational complexity:
-"Generating every possible board" is essentially a deeply nested loop, and
-since there is no dependency by one board on another there is no need to keep
-more than one instance of a board in memory at any time.
-
-For each board we instantiate a Board with Piece's that can compute their own
-reachability within the board. We iterate over the pieces to find other pieces
-reachable from them. We stop as soon as we've found a single match.
-
-The number of checks for occupancy will be:
-
-number of pieces on the board P
-times the number of cells reachable by each piece in P (which depends on the type of piece)
-
-K (King) = 8
-Q (Queen) = N + M + 2 * diag
-R (Rook) = N + M
-N (Knight) = 8
-B (Bishop) = 2 * diag
-
-diag is essentially sqrt( N^2 + M^2 ) if the board is square (N = M)
-in the more general case it's sqrt( 2 * min(N, M)^2 )
-
-These numbers are upper bounds, because in practice many of the "reachable
-cells" will fall outside the board. And because the occupancy check terminates
-as soon as a single match is found. Moreover, these numbers grow linearly in N
-and M and present a very small factor multiplied by the number of boards we
-need to examine.
-
-So overall complexity is:
-    (number of boards) * (number of pieces * number of occupancy checks per piece)
-    [ (N * M) ^ P    ] * [P                * N + M (approx)]
-
-for the example case 7x7 with 7 pieces the factor on the right is: 7 * 7+7 so
-that adds about two levels of magnitude. Again, this is a significant
-over-estimation of the upper bound.
-
-In other words, it's not that checking a single board is costly, it's the
-number of boards to check.
-
-Runtime estimate:
-Take a very rough estimate of 50ns per occupancy check in Python (mostly
-iteration and dict lookup). Assume ammortized board instantiation.
-
-That gives: ((7*7)^7) * (7 * 7+7) * 50ns = 38 days
-
-
-
-= Restricted board approach
-
-Clearly the brute force method is made expensive by generating all boards and
-then eliminating most of them as invalid. If instead we could generate only
-valid boards to begin with it would be more efficient.
-
-The idea of the restricted board is one that enforces the unreachability
-invariant, so when attempting to place a piece on the board the board will not
-allow it should that placement cause any piece on the board to become
-reachable.
-
-The second thing we need is a strategy for filling up the board. For this we
-start in the top left corner and proceed left-to-right, top-to-bottom. As we
-place successive pieces we do so as tightly as possible while maintaining
-unreachability.
-
-Example (board is 3x3, we have to place 2 Kings, 1 Rook):
-
--------
-| | | |
--------
-| | | |
--------
-| | | |
--------
-
-We begin at cell 1,1. The king makes the surrounding cells reachable.
-
--------
-|K|.| |
--------
-|.|.| |
--------
-| | | |
--------
-
-We proceed to cell 2,1, which is reachable, so we continue to cell 3,1 and
-place a king there:
-
--------
-|K|.|K|
--------
-|.|.|.|
--------
-| | | |
--------
-
-We only have the rook left. Cells 1,2, 2,2, 3,2 are all reachable. The next
-available cell is 1,3. We can't place the rook there, since it would be able
-to reach the king. We proceed to 2,3 and place the rook there:
+Let's start with an example board containing a few pieces:
 
 -------
 |K|.|K|
@@ -145,53 +25,75 @@ to reach the king. We proceed to 2,3 and place the rook there:
 |.|R|.|
 -------
 
-We've placed all the pieces successfully. The board is valid.
+King (K)
+Rook (R)
+Queen (Q)
+Knight (N)
+Bishop (B)
 
-Obviously, this is just one of many possible boards. To discover the others
-we will vary on two elements:
-- the order in which we place the pieces (in the example it was King, King, Rook)
-- the cell we start in (in the example it was 1,1 - next round would be 2,1)
-    - when we reach the end of the board during placement (lower right corner)
-    we wrap around to 1,1
+Dots mark reachability, namely cells that are reachable by some piece. On this
+board all empty cells (ie. cells not containing a piece) are reachable, but
+none of the pieces are reachable by any of the other pieces. This means two
+things:
 
-This amounts to the following:
-- We use a board that enforces unreachability,
-    - placing pieces on the board successively,
-    - enumerating over all the pieces.
-- Furthermore, we generate the board using
-    - every permutation of pieces, and
-    - starting from every cell on the board.
+1) The board is valid.
+2) The board is full in the sense that no other piece may be placed without
+violating the unreachability condition.
 
-Rationale for correctness and completeness:
-Given a restricted board we can assume every board we generate will be valid as
-long as we are able to place all the pieces.
 
-Completeness is a very different story. Since under this approach we will not
-generate every possible board (valid+invalid) there is no a priori reason to
-expect that we will discover every valid board.
+Let's now consider what it means to generate all possible boards using a given
+set of pieces. From the example we can see that:
 
-However, since we execute our placement procedure starting at every cell on the
-board, and trying every permutation of our pieces, it logically follows that
-this exhausts all possibilities of valid boards.
+1) A type of piece is interchangeable with itself, ie. a board which contains a
+King at 0,0 and another King at 2,0 is the same board as if the two kings
+swapped places. Another way of expressing this is: pieces don't have identity.
+We're not interested in "which" king is where, merely "where the kings are" -
+one king is as good as another.
 
-That is, with one caveat. Since our placement procedure always places pieces as
-tightly as possible, we will never discover boards where there is more room on
-the board than is needed for the pieces.
+2) The same holds true for empty cells.
 
-Counter-example (board is 4x4, we have 2 Kings to place):
 
-FOUND             NOT FOUND
----------         ---------
-|K|.|K|.|         |K|.| | |
----------         ---------
-|.|.|.|.|         |.|.|.|.|
----------         ---------
-| | | | |         | | |.|K|
----------         ---------
-| | | | |         | | |.|.|
----------         ---------
+To simplify the problem, we can represent a 2 dimensional board as an array.
+We store the cells as if they were contiguous in memory like so:
 
-The fact that we place pieces left-to-right and top-to-bottom has no special
-significance, because all of the pieces in use (pawns are excluded) are
-orientation neutral, so going top-to-bottom is sufficient without also going
-bottom-to-top to discover additional boards.
+   -------- row 1 --------   ------- row 2 --------   -------- row 3 -------
+[  (0, 0) , (1, 0), (2, 0),  (0, 1), (1, 1), (2, 1),  (0, 2), (1, 2), (2, 2)  ]
+
+The contents of the array would then be (dash means empty cell):
+
+[  K,       -,      K,       -,      -,      -,       -,      R,      -       ]
+
+Or more compactly:
+
+K-K----R-
+
+The problem of generating all possible boards using the pieces (K, K, R) can
+now be expressed as the problem of generating all possible 9 character
+sequences (since there are 9 cells on the board) using a combination of (2 * K,
+1 * R, 6 * -) such that each sequence is unique.
+
+More generally, the problem of generating all possible boards given pieces P
+can be expressed as that of generating all possible sequences of the pieces in
+P, where each piece appears as many times as in P and the rest of the cells on
+the board represented by a dash (empty cell).
+
+
+NOTE: After much staring at example sequences on the whiteboard I cannot seem
+to figure out the pattern needed to generate the sequences we want such that we
+only generate distinct sequences. Nor can I figure out how to analyze the size
+of the result of this function. What we are looking for is not the standard
+permutations (as in math), because that does not produce a distinct collection
+of sequences.
+
+What we are looking for is a function that does essentially the following:
+
+    set( math.permutations('KKR------') )
+
+But without generating all the duplicates in the first place.
+
+
+== Modeling the board
+
+A model of the board that checks for validity is implemented (with tests and
+all). What's missing is a generator (from step 1 above) that would generate all
+the boards, which we would plug into this model to filter out the invalid ones.
