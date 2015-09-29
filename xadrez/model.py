@@ -1,8 +1,16 @@
+'''This module contains a model of a chess board and its pieces.'''
+
+
 class ConflictError(Exception):
+    '''I am intended to be used to indicate that two pieces on a board conflict
+    with each other.'''
     pass
 
 
 class Piece(object):
+    '''I represent an abstract piece on a board - I am not intended to be
+    instantiated directly.'''
+
     symbol = None
 
     def __repr__(self):
@@ -17,6 +25,9 @@ class Piece(object):
         )
 
     def is_outside_board(self, dimensions, cell):
+        '''Checks whether the given cell falls outside the board given the
+        dimensions.'''
+
         x, y = dimensions
         i, j = cell
 
@@ -26,14 +37,22 @@ class Piece(object):
         )
 
     def filter_inside_board(self, dimensions, cells):
+        '''Filters out `cells` that fall outside the board given the
+        `dimensions`.'''
+
         return [cell for cell in cells
                 if not self.is_outside_board(dimensions, cell)]
 
     def reaches(self, coord, dimensions):
+        '''Computes all cells that are reachable by the piece (excluding the
+        cell the piece itself occupies).'''
+
         raise NotImplementedError
 
 
 def get_bishop_reach(coord, dimensions):
+    '''Computes the reach of a bishop.'''
+
     i, j = coord
     x, y = dimensions
 
@@ -75,6 +94,8 @@ def get_bishop_reach(coord, dimensions):
 
 
 def get_rook_reach(coord, dimensions):
+    '''Computes the reach of a rook.'''
+
     i, j = coord
     x, y = dimensions
 
@@ -94,6 +115,8 @@ def get_rook_reach(coord, dimensions):
 
 
 class Bishop(Piece):
+    '''I represent a bishop piece on a board.'''
+
     symbol = 'B'
 
     def reaches(self, coord, dimensions):
@@ -101,9 +124,13 @@ class Bishop(Piece):
 
 
 class King(Piece):
+    '''I represent a king piece on a board.'''
+
     symbol = 'K'
 
     def reaches(self, coord, dimensions):
+        # pylint: disable=bad-whitespace
+
         i, j = coord
         cells = [
             (i-1, j-1), (i, j-1), (i-1, j-1),
@@ -116,9 +143,14 @@ class King(Piece):
 
 
 class Knight(Piece):
+    '''I represent a knight piece on a board.'''
+
     symbol = 'N'
 
     def reaches(self, coord, dimensions):
+        # pylint: disable=bad-continuation
+        # pylint: disable=bad-whitespace
+
         i, j = coord
         cells = [
                         (i-1, j-2),         (i+1, j-2),
@@ -133,6 +165,8 @@ class Knight(Piece):
 
 
 class Queen(Piece):
+    '''I represent a queen piece on a board.'''
+
     symbol = 'Q'
 
     def reaches(self, coord, dimensions):
@@ -143,6 +177,8 @@ class Queen(Piece):
 
 
 class Rook(Piece):
+    '''I represent a rook piece on a board.'''
+
     symbol = 'R'
 
     def reaches(self, coord, dimensions):
@@ -150,6 +186,9 @@ class Rook(Piece):
 
 
 class Board(object):
+    '''I represent a chess board with dimensions (x, y) and placements of
+    pieces on the board.'''
+
     def __init__(self, dimensions, placements=None, backfill_placements=True):
         try:
             x, y = dimensions
@@ -198,6 +237,10 @@ class Board(object):
         )
 
     def check_valid(self):
+        '''Check the board for validity. If the board is valid that means no
+        piece on the board can reach any other piece. Raises ConflictError if
+        validity does not hold.'''
+
         # For each piece get its coordinates
         for piece, coord in self.piece_index.items():
 

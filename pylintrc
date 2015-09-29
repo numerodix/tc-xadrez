@@ -1,0 +1,12 @@
+[MESSAGES CONTROL]
+
+# too-few-public-methods - too ridiculous to enforce for this project
+# no-self-use - we group methods by where they logically belong, even if they don't depend on the object
+disable=too-few-public-methods,no-self-use
+
+
+[BASIC]
+
+# We have a bunch of code operating on a coordinate system, so these names are
+# pretty appropriate actually.
+good-names=i,j,x,y,zx,zy
