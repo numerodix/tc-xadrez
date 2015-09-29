@@ -25,7 +25,7 @@ class Piece(object):
         )
 
     def is_outside_board(self, dimensions, cell):
-        '''Checks whether the given cell falls outside the board given the
+        '''Check whether the given cell falls outside the board given the
         dimensions.'''
 
         x, y = dimensions
@@ -37,21 +37,21 @@ class Piece(object):
         )
 
     def filter_inside_board(self, dimensions, cells):
-        '''Filters out `cells` that fall outside the board given the
+        '''Filter out `cells` that fall outside the board given the
         `dimensions`.'''
 
         return [cell for cell in cells
                 if not self.is_outside_board(dimensions, cell)]
 
     def reaches(self, coord, dimensions):
-        '''Computes all cells that are reachable by the piece (excluding the
+        '''Compute all cells that are reachable by the piece (excluding the
         cell the piece itself occupies).'''
 
         raise NotImplementedError
 
 
 def get_bishop_reach(coord, dimensions):
-    '''Computes the reach of a bishop.'''
+    '''Compute the reach of a bishop.'''
 
     i, j = coord
     x, y = dimensions
@@ -94,7 +94,7 @@ def get_bishop_reach(coord, dimensions):
 
 
 def get_rook_reach(coord, dimensions):
-    '''Computes the reach of a rook.'''
+    '''Compute the reach of a rook.'''
 
     i, j = coord
     x, y = dimensions
