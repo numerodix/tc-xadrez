@@ -3,6 +3,8 @@ class ConflictError(Exception):
 
 
 class Piece(object):
+    symbol = None
+
     def __repr__(self):
         return '<%s symbol=%r>' % (
             self.__class__.__name__,
@@ -173,6 +175,8 @@ class Board(object):
                     coord = (i, j)
                     if coord not in placements:
                         placements[coord] = None
+
+        # TODO: should probably check that all placements are actually on the board
 
         # Build an index on pieces because it's useful to have easy access to
         # them
